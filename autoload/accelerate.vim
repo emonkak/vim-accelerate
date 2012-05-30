@@ -45,7 +45,7 @@ function! accelerate#map(modes, options, lhs, rhs, ...)  "{{{2
   let _ = {
   \   'velocity': g:accelerate_velocity,
   \   'duration': g:accelerate_duration,
-  \   'easing':  g:accelerate_easing,
+  \   'easing': g:accelerate_easing,
   \ }
   if a:0 > 0
     call extend(_, a:1)
@@ -180,7 +180,7 @@ endfunction
 
 
 
-function! s:set_up_options(key)  "{{{2
+function! s:set_up_options(lhs)  "{{{2
   let s:original_eventignore = &eventignore
   let s:original_showcmd = &showcmd
   let s:original_timeout = &timeout
@@ -191,11 +191,11 @@ function! s:set_up_options(key)  "{{{2
   set noshowcmd  " To avoid flickering in the bottom line.
   set timeout  " To ensure time out on :mappings
   let &timeoutlen = get(g:accelerate_timeoutlens,
-  \                     a:key,
+  \                     a:lhs,
   \                     g:accelerate_timeoutlen)
-  let &ttimeoutlen = (0 <= s:original_ttimeoutlen
-  \                   ? s:original_ttimeoutlen
-  \                   : s:original_timeoutlen)
+  let &ttimeoutlen = s:original_ttimeoutlen < 0
+  \                ? s:original_timeoutlen
+  \                : s:original_ttimeoutlen
 endfunction
 
 
