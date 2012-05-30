@@ -137,6 +137,7 @@ endfunction
 function! s:restore_options()  "{{{2
   let s:count = 0
 
+  let &eventignore = s:original_eventignore
   let &showcmd = s:original_showcmd
   let &timeout = s:original_timeout
   let &timeoutlen = s:original_timeoutlen
@@ -147,11 +148,13 @@ endfunction
 
 
 function! s:set_up_options(key)  "{{{2
+  let s:original_eventignore = &eventignore
   let s:original_showcmd = &showcmd
   let s:original_timeout = &timeout
   let s:original_timeoutlen = &timeoutlen
   let s:original_ttimeoutlen = &ttimeoutlen
 
+  set eventignore=CursorMoved,CursorMovedI
   set noshowcmd  " To avoid flickering in the bottom line.
   set timeout  " To ensure time out on :mappings
   let &timeoutlen = get(g:accelerate_timeoutlens,
