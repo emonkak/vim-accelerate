@@ -54,7 +54,15 @@ function! accelerate#map(modes, options, lhs, rhs, ...)  "{{{2
   for mode in s:each_char(a:modes)
     call s:do_map(mode, a:options, a:lhs, a:rhs, _.velocity, _.duration, _.easing)
   endfor
-  return
+endfunction
+
+
+
+
+function! accelerate#unmap(modes, options, lhs)  "{{{2
+  for mode in s:each_char(a:modes)
+    call s:do_unmap(mode, a:options, a:lhs)
+  endfor
 endfunction
 
 
@@ -113,6 +121,22 @@ function! s:do_map(mode, options, lhs, rhs, velocity, duration, easing)  "{{{2
   \              opt_expr,
   \              a:lhs,
   \              a:rhs)
+endfunction
+
+
+
+
+function! s:do_unmap(mode, options, lhs)  "{{{2
+  let opt_buffer = a:options =~# 'b' ? '<buffer>' : ''
+
+  execute printf('%sunmap %s %s',
+  \              a:mode, opt_buffer, a:lhs)
+  execute printf('%sunmap %s <SID>prefix:%s',
+  \              a:mode, opt_buffer, a:lhs)
+  execute printf('%sunmap %s <SID>prefix:%s%s',
+  \              a:mode, opt_buffer, a:lhs, last_key)
+  execute printf('%sunmap %s <SID>do:%s',
+  \              a:mode, opt_buffer, a:lhs)
 endfunction
 
 
