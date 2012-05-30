@@ -26,7 +26,7 @@
 
 let g:accelerate_timeoutlen = get(g:, 'accelerate_timeoutlen', 40)
 let g:accelerate_timeoutlens = get(g:, 'accelerate_timeoutlens', {})
-let g:accelerate_velocity = get(g:, 'accelerate_velocity', 10)
+let g:accelerate_velocity = get(g:, 'accelerate_velocity', 25)
 let g:accelerate_duration = get(g:, 'accelerate_duration', 20)
 let g:accelerate_easing = get(g:, 'accelerate_easing', "\<SID>easing")
 
@@ -80,7 +80,7 @@ endfunction
 
 function! s:on_progress(lhs, velocity, duration, easing)  "{{{2
   let rhs = printf("\<Plug>(accelerate-rhs:%s)", a:lhs)
-  let c = {a:easing}(s:count, 1, a:velocity, a:duration)
+  let c = {a:easing}(min([s:count, a:duration]), 1, a:velocity, a:duration)
   call feedkeys(c . rhs . printf("\<Plug>(accelerate-prefix:%s)", a:lhs), 't')
   let s:count += 1
   return ''
