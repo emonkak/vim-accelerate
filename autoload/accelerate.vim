@@ -28,6 +28,7 @@ let g:accelerate_timeoutlen = get(g:, 'accelerate_timeoutlen', 40)
 let g:accelerate_timeoutlens = get(g:, 'accelerate_timeoutlens', {})
 let g:accelerate_velocity = get(g:, 'accelerate_velocity', 10)
 let g:accelerate_duration = get(g:, 'accelerate_duration', 20)
+let g:accelerate_easing = get(g:, 'accelerate_easing', "\<SID>easing")
 
 
 
@@ -44,7 +45,7 @@ function! accelerate#map(modes, options, lhs, rhs, ...)  "{{{2
   let _ = {
   \   'velocity': g:accelerate_velocity,
   \   'duration': g:accelerate_duration,
-  \   'easing':  "\<SID>easing",
+  \   'easing':  g:accelerate_easing,
   \ }
   if a:0 > 0
     call extend(_, a:1)
