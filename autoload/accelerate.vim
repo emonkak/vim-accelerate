@@ -70,7 +70,7 @@ endfunction
 
 function! s:on_end(lhs)  "{{{2
   call s:restore_options()
-  return printf("\<Plug>(accelerate-rhs:%s)", a:lhs)
+  return s:SID . 'do:' . a:lhs
 endfunction
 
 
@@ -80,16 +80,17 @@ function! s:on_start(lhs)  "{{{2
   if s:count is 0
     call s:set_up_options(a:lhs)
   endif
-  return printf("\<Plug>(accelerate-prefix:%s)", a:lhs)
+  return s:SID . 'prefix:' . a:lhs
 endfunction
 
 
 
 
 function! s:on_progress(lhs, velocity, duration, easing)  "{{{2
-  let rhs = printf("\<Plug>(accelerate-rhs:%s)", a:lhs)
   let c = {a:easing}(min([s:count, a:duration]), 1, a:velocity, a:duration)
-  call feedkeys(c . rhs . printf("\<Plug>(accelerate-prefix:%s)", a:lhs), 't')
+  let do = s:SID . 'do:' . a:lhs
+  let prefix = s:SID . 'prefix:' . a:lhs
+  call feedkeys(c . do . prefix, 't')
   let s:count += 1
   return ''
 endfunction
@@ -99,26 +100,26 @@ endfunction
 
 function! s:do_map(mode, options, lhs, rhs, velocity, duration, easing)  "{{{2
   let opt_buffer = a:options =~# 'b' ? '<buffer>' : ''
-  let opt_expr = a:options =~# 'e' ? '<expr>' : ''
   let remap_p = a:options =~# 'r'
   let last_key = a:lhs[strlen(a:lhs) - 1]
 
   execute printf('%smap <expr> %s %s  <SID>on_start(%s)',
   \              a:mode, opt_buffer, a:lhs, string(a:lhs))
-  execute printf('%smap <expr> <Plug>(accelerate-prefix:%s)  <SID>on_end(%s)',
-  \              a:mode, a:lhs, string(a:lhs))
-  execute printf('%smap <expr> <Plug>(accelerate-prefix:%s)%s  <SID>on_progress(%s, %d, %d, %s)',
+  execute printf('%smap <expr> %s <SID>prefix:%s  <SID>on_end(%s)',
+  \              a:mode, opt_buffer, a:lhs, string(a:lhs))
+  execute printf('%smap <expr> %s <SID>prefix:%s%s  <SID>on_progress(%s, %d, %d, %s)',
   \              a:mode,
+  \              opt_buffer,
   \              a:lhs,
   \              last_key,
   \              string(a:lhs),
   \              a:velocity,
   \              a:duration,
   \              string(a:easing))
-  execute printf('%s%smap %s <Plug>(accelerate-rhs:%s)  %s',
+  execute printf('%s%smap %s <SID>do:%s  %s',
   \              a:mode,
   \              remap_p ? '' : 'nore',
-  \              opt_expr,
+  \              s:map_options(a:options),
   \              a:lhs,
   \              a:rhs)
 endfunction
@@ -143,6 +144,14 @@ endfunction
 
 
 " Misc.  "{{{1
+function! s:SID()  "{{{2
+  return matchstr(expand('<sfile>'), '<SNR>\zs\d\+\ze_')
+endfunction
+let s:SID = "\<SNR>" . s:SID() . '_'
+
+
+
+
 function! s:easing(t, b, c, d)  "{{{2
   let t = (a:t + 0.0) / (a:d + 0.0)
   return float2nr(round(a:c * t * t * t + a:b))
@@ -187,6 +196,19 @@ function! s:set_up_options(key)  "{{{2
   let &ttimeoutlen = (0 <= s:original_ttimeoutlen
   \                   ? s:original_ttimeoutlen
   \                   : s:original_timeoutlen)
+endfunction
+
+
+
+
+function! s:map_options(options)  "{{{2
+  let _ = {
+  \   'b': '<buffer>',
+  \   'e': '<expr>',
+  \   's': '<silent>',
+  \   'u': '<unique>',
+  \ }
+  return join(map(s:each_char(a:options), 'get(_, v:val, "")'))
 endfunction
 
 
