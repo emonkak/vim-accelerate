@@ -22,20 +22,19 @@
 "     SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 " }}}
 " Variables  "{{{1
-" Global  "{{{2
+
+let s:count = 0
+
+function! s:SID()
+  return matchstr(expand('<sfile>'), '<SNR>\zs\d\+\ze_')
+endfunction
+let s:SID = "\<SNR>" . s:SID() . '_'
 
 let g:accelerate_timeoutlen = get(g:, 'accelerate_timeoutlen', 80)
 let g:accelerate_timeoutlens = get(g:, 'accelerate_timeoutlens', {})
 let g:accelerate_velocity = get(g:, 'accelerate_velocity', 20)
 let g:accelerate_duration = get(g:, 'accelerate_duration', 20)
-let g:accelerate_easing = get(g:, 'accelerate_easing', "\<SID>easing")
-
-
-
-
-" Script-local  "{{{2
-
-let s:count = 0
+let g:accelerate_easing = get(g:, 'accelerate_easing', s:SID . 'easing')
 
 
 
@@ -87,7 +86,7 @@ endfunction
 
 
 function! s:on_progress(lhs, velocity, duration, easing)  "{{{2
-  let c = {a:easing}(min([s:count, a:duration]), 1, a:velocity, a:duration)
+  let c = function(a:easing)(min([s:count, a:duration]), 1, a:velocity, a:duration)
   let do = s:SID . 'do:' . a:lhs
   let prefix = s:SID . 'prefix:' . a:lhs
   call feedkeys(c . do . prefix, 't')
@@ -144,14 +143,6 @@ endfunction
 
 
 " Misc.  "{{{1
-function! s:SID()  "{{{2
-  return matchstr(expand('<sfile>'), '<SNR>\zs\d\+\ze_')
-endfunction
-let s:SID = "\<SNR>" . s:SID() . '_'
-
-
-
-
 function! s:easing(t, b, c, d)  "{{{2
   let t = (a:t + 0.0) / (a:d + 0.0)
   return float2nr(round(a:c * t * t * t + a:b))
