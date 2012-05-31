@@ -128,6 +128,7 @@ endfunction
 
 function! s:do_unmap(mode, options, lhs)  "{{{2
   let opt_buffer = a:options =~# 'b' ? '<buffer>' : ''
+  let last_key = a:lhs[strlen(a:lhs) - 1]
 
   execute printf('%sunmap %s %s',
   \              a:mode, opt_buffer, a:lhs)
