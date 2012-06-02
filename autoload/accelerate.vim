@@ -105,7 +105,7 @@ endfunction
 function! s:do_map(mode, options, lhs, rhs, velocity, duration, easing)  "{{{2
   let opt_buffer = a:options =~# 'b' ? '<buffer>' : ''
   let remap_p = a:options =~# 'r'
-  let last_key = a:lhs[strlen(a:lhs) - 1]
+  let last_key = s:last_key(a:lhs)
 
   execute printf('%smap <expr> %s %s  <SID>on_start(%s)',
   \              a:mode, opt_buffer, a:lhs, string(a:lhs))
@@ -133,7 +133,7 @@ endfunction
 
 function! s:do_unmap(mode, options, lhs)  "{{{2
   let opt_buffer = a:options =~# 'b' ? '<buffer>' : ''
-  let last_key = a:lhs[strlen(a:lhs) - 1]
+  let last_key = s:last_key(a:lhs)
 
   execute printf('%sunmap %s %s',
   \              a:mode, opt_buffer, a:lhs)
@@ -205,6 +205,13 @@ function! s:map_options(options)  "{{{2
   \   'u': '<unique>',
   \ }
   return join(map(s:each_char(a:options), 'get(_, v:val, "")'))
+endfunction
+
+
+
+
+function! s:last_key(key)  "{{{2
+  return matchstr(a:key, '\(<[0-9A-Za-z-]\+>\|\S\)$')
 endfunction
 
 
