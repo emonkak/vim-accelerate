@@ -69,7 +69,7 @@ endfunction
 
 function! s:on_end(lhs)  "{{{2
   call s:restore_options()
-  return s:SID . 'do:' . a:lhs
+  return s:SID . 'rhs:' . a:lhs
 endfunction
 
 
@@ -87,9 +87,9 @@ endfunction
 
 function! s:on_progress(lhs, velocity, duration, easing)  "{{{2
   let c = function(a:easing)(min([s:count, a:duration]), 1, a:velocity, a:duration)
-  let do = s:SID . 'do:' . a:lhs
+  let rhs = s:SID . 'rhs:' . a:lhs
   let prefix = s:SID . 'prefix:' . a:lhs
-  call feedkeys(c . do . prefix, 't')
+  call feedkeys(c . rhs . prefix, 't')
   let s:count += 1
   return ''
 endfunction
@@ -115,7 +115,7 @@ function! s:do_map(mode, options, lhs, rhs, velocity, duration, easing)  "{{{2
   \              a:velocity,
   \              a:duration,
   \              string(a:easing))
-  execute printf('%s%smap %s <SID>do:%s  %s',
+  execute printf('%s%smap %s <SID>rhs:%s  %s',
   \              a:mode,
   \              remap_p ? '' : 'nore',
   \              s:map_options(a:options),
@@ -136,7 +136,7 @@ function! s:do_unmap(mode, options, lhs)  "{{{2
   \              a:mode, opt_buffer, a:lhs)
   execute printf('%sunmap %s <SID>prefix:%s%s',
   \              a:mode, opt_buffer, a:lhs, last_key)
-  execute printf('%sunmap %s <SID>do:%s',
+  execute printf('%sunmap %s <SID>rhs:%s',
   \              a:mode, opt_buffer, a:lhs)
 endfunction
 
