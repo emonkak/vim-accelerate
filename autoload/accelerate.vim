@@ -40,18 +40,23 @@ let g:accelerate_easing = get(g:, 'accelerate_easing', s:SID . 'easing')
 
 
 " Interface  "{{{1
-function! accelerate#map(modes, options, lhs, rhs, ...)  "{{{2
+function! accelerate#map(modes, options, lhs, ...)  "{{{2
   let _ = {
   \   'velocity': g:accelerate_velocity,
   \   'duration': g:accelerate_duration,
   \   'easing': g:accelerate_easing,
   \ }
-  if a:0 > 0
-    call extend(_, a:1)
+  let rhs = get(a:000, 0, a:lhs)
+
+  if type(rhs) == type({})
+    call extend(_, rhs)
+    let rhs = a:lhs
+  else
+    call extend(_, get(a:000, 1, {}))
   endif
 
   for mode in s:each_char(a:modes)
-    call s:do_map(mode, a:options, a:lhs, a:rhs, _.velocity, _.duration, _.easing)
+    call s:do_map(mode, a:options, a:lhs, rhs, _.velocity, _.duration, _.easing)
   endfor
 endfunction
 
