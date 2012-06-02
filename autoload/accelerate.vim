@@ -33,7 +33,7 @@ let s:SID = "\<SNR>" . s:SID() . '_'
 let g:accelerate_timeoutlen = get(g:, 'accelerate_timeoutlen', 80)
 let g:accelerate_timeoutlens = get(g:, 'accelerate_timeoutlens', {})
 let g:accelerate_velocity = get(g:, 'accelerate_velocity', 20)
-let g:accelerate_duration = get(g:, 'accelerate_duration', 20)
+let g:accelerate_duration = get(g:, 'accelerate_duration', 80)
 let g:accelerate_easing = get(g:, 'accelerate_easing', s:SID . 'easing')
 
 
@@ -86,7 +86,7 @@ endfunction
 
 
 function! s:on_progress(lhs, velocity, duration, easing)  "{{{2
-  let c = function(a:easing)(min([s:count, a:duration]), 1, a:velocity, a:duration)
+  let c = function(a:easing)(s:count, 1, a:velocity, a:duration)
   let rhs = s:SID . 'rhs:' . a:lhs
   let prefix = s:SID . 'prefix:' . a:lhs
   call feedkeys(c . rhs . prefix, 't')
@@ -145,8 +145,7 @@ endfunction
 
 " Misc.  "{{{1
 function! s:easing(t, b, c, d)  "{{{2
-  let t = (a:t + 0.0) / (a:d + 0.0)
-  return float2nr(round(a:c * t * t * t + a:b))
+  return a:c * min([a:t, a:d]) / a:d + a:b
 endfunction
 
 
