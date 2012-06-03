@@ -183,7 +183,7 @@ function! s:set_up_options(lhs)  "{{{2
   let s:original_timeoutlen = &timeoutlen
   let s:original_ttimeoutlen = &ttimeoutlen
 
-  set eventignore=CursorMoved,CursorMovedI
+  set eventignore+=CursorMoved,CursorMovedI
   set noshowcmd  " To avoid flickering in the bottom line.
   set timeout  " To ensure time out on :mappings
   let &timeoutlen = get(g:accelerate_timeoutlens,
