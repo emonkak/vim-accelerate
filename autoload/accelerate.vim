@@ -33,7 +33,7 @@ let s:SID = "\<SNR>" . s:SID() . '_'
 let g:accelerate_timeoutlen = get(g:, 'accelerate_timeoutlen', 80)
 let g:accelerate_timeoutlens = get(g:, 'accelerate_timeoutlens', {})
 let g:accelerate_velocity = get(g:, 'accelerate_velocity', 20)
-let g:accelerate_duration = get(g:, 'accelerate_duration', 80)
+let g:accelerate_duration = get(g:, 'accelerate_duration', 40)
 let g:accelerate_easing = get(g:, 'accelerate_easing', s:SID . 'easing')
 
 
