@@ -46,13 +46,12 @@ function! accelerate#map(modes, options, lhs, ...)  "{{{2
   \   'duration': g:accelerate_duration,
   \   'easing': g:accelerate_easing,
   \ }
-  let rhs = get(a:000, 0, a:lhs)
 
-  if type(rhs) == type({})
-    call extend(_, rhs)
-    let rhs = a:lhs
-  else
+  if a:0 > 0
+    let rhs = a:1
     call extend(_, get(a:000, 1, {}))
+  else
+    let rhs = a:lhs
   endif
 
   for mode in s:each_char(a:modes)
@@ -84,7 +83,7 @@ function! s:on_start(lhs)  "{{{2
   if s:count is 0
     call s:set_up_options(a:lhs)
   endif
-  return s:SID . 'prefix:' . a:lhs
+  return s:SID . 'work:' . a:lhs
 endfunction
 
 
@@ -93,8 +92,8 @@ endfunction
 function! s:on_progress(lhs, velocity, duration, easing)  "{{{2
   let c = function(a:easing)(s:count, 1, a:velocity, a:duration)
   let rhs = s:SID . 'rhs:' . a:lhs
-  let prefix = s:SID . 'prefix:' . a:lhs
-  call feedkeys(c . rhs . prefix, 't')
+  let work = s:SID . 'work:' . a:lhs
+  call feedkeys(c . rhs . work, 't')
   let s:count += 1
   return ''
 endfunction
@@ -105,25 +104,24 @@ endfunction
 function! s:do_map(mode, options, lhs, rhs, velocity, duration, easing)  "{{{2
   let opt_buffer = a:options =~# 'b' ? '<buffer>' : ''
   let remap_p = a:options =~# 'r'
-  let last_key = s:last_key(a:lhs)
 
   execute printf('%smap <expr> %s %s  <SID>on_start(%s)',
-  \              a:mode, opt_buffer, a:lhs, string(a:lhs))
-  execute printf('%smap <expr> %s <SID>prefix:%s  <SID>on_end(%s)',
-  \              a:mode, opt_buffer, a:lhs, string(a:lhs))
-  execute printf('%smap <expr> %s <SID>prefix:%s%s  <SID>on_progress(%s, %d, %d, %s)',
+  \              a:mode, opt_buffer, a:lhs, string(s:unescape_lhs(a:lhs)))
+  execute printf('%smap <expr> %s <SID>work:%s  <SID>on_end(%s)',
+  \              a:mode, opt_buffer, a:lhs, string(s:unescape_lhs(a:lhs)))
+  execute printf('%smap <expr> %s <SID>work:%s%s  <SID>on_progress(%s, %d, %d, %s)',
   \              a:mode,
   \              opt_buffer,
   \              a:lhs,
-  \              last_key,
-  \              string(a:lhs),
+  \              s:split_to_keys(a:lhs)[-1],
+  \              string(s:unescape_lhs(a:lhs)),
   \              a:velocity,
   \              a:duration,
   \              string(a:easing))
   execute printf('%s%smap %s <SID>rhs:%s  %s',
   \              a:mode,
   \              remap_p ? '' : 'nore',
-  \              s:map_options(a:options),
+  \              s:to_map_arguments(a:options),
   \              a:lhs,
   \              a:rhs)
 endfunction
@@ -133,14 +131,13 @@ endfunction
 
 function! s:do_unmap(mode, options, lhs)  "{{{2
   let opt_buffer = a:options =~# 'b' ? '<buffer>' : ''
-  let last_key = s:last_key(a:lhs)
 
   execute printf('%sunmap %s %s',
   \              a:mode, opt_buffer, a:lhs)
-  execute printf('%sunmap %s <SID>prefix:%s',
+  execute printf('%sunmap %s <SID>work:%s',
   \              a:mode, opt_buffer, a:lhs)
-  execute printf('%sunmap %s <SID>prefix:%s%s',
-  \              a:mode, opt_buffer, a:lhs, last_key)
+  execute printf('%sunmap %s <SID>work:%s%s',
+  \              a:mode, opt_buffer, a:lhs, s:split_to_keys(a:lhs)[-1])
   execute printf('%sunmap %s <SID>rhs:%s',
   \              a:mode, opt_buffer, a:lhs)
 endfunction
@@ -194,21 +191,25 @@ endfunction
 
 
 
-function! s:map_options(options)  "{{{2
-  let _ = {
-  \   'b': '<buffer>',
-  \   'e': '<expr>',
-  \   's': '<silent>',
-  \   'u': '<unique>',
-  \ }
+function! s:split_to_keys(lhs)  "{{{2
+  return split(a:lhs, '\(<[^<>]\+>\|.\)\zs')
+endfunction
+
+
+
+
+function! s:to_map_arguments(options)  "{{{2
+  let _ = {'b': '<buffer>', 'e': '<expr>', 's': '<silent>', 'u': '<unique>'}
   return join(map(s:each_char(a:options), 'get(_, v:val, "")'))
 endfunction
 
 
 
 
-function! s:last_key(key)  "{{{2
-  return matchstr(a:key, '\(<[0-9A-Za-z-]\+>\|\S\)$')
+function! s:unescape_lhs(escaped_lhs)  "{{{2
+  let keys = s:split_to_keys(a:escaped_lhs)
+  call map(keys, 'v:val =~ "^<.*>$" ? eval(''"\'' . v:val . ''"'') : v:val')
+  return join(keys, '')
 endfunction
 
 
