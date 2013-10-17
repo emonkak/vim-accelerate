@@ -24,6 +24,8 @@
 " Variables  "{{{1
 
 let s:count = 0
+let s:last_accelerated_at = [0, 0]
+let s:last_accelerated_key = 0
 
 function! s:SID()
   return matchstr(expand('<sfile>'), '<SNR>\zs\d\+\ze_')
@@ -34,7 +36,7 @@ let g:accelerate_timeoutlen = get(g:, 'accelerate_timeoutlen', 80)
 let g:accelerate_timeoutlens = get(g:, 'accelerate_timeoutlens', {})
 let g:accelerate_velocity = get(g:, 'accelerate_velocity', 20)
 let g:accelerate_duration = get(g:, 'accelerate_duration', 40)
-let g:accelerate_easing = get(g:, 'accelerate_easing', s:SID . 'easing')
+let g:accelerate_easing = get(g:, 'accelerate_easing', 'accelerate#_easing')
 
 
 
@@ -71,31 +73,16 @@ endfunction
 
 
 
-function! s:on_end(lhs)  "{{{2
-  call s:restore_options()
-  return s:SID . 'rhs:' . a:lhs
+function! accelerate#_easing(t, b, c, d)  "{{{2
+  return a:c * min([a:t, a:d]) / a:d + a:b
 endfunction
 
 
 
 
-function! s:on_start(lhs)  "{{{2
-  if s:count is 0
-    call s:set_up_options(a:lhs)
-  endif
-  return s:SID . 'work:' . a:lhs
-endfunction
-
-
-
-
-function! s:on_progress(lhs, velocity, duration, easing)  "{{{2
-  let c = function(a:easing)(s:count, 1, a:velocity, a:duration)
-  let rhs = s:SID . 'rhs:' . a:lhs
-  let work = s:SID . 'work:' . a:lhs
-  call feedkeys(c . rhs . work, 't')
-  let s:count += 1
-  return ''
+" Misc.  "{{{1
+function! s:elapsed_time_in_milliseconds(now)  "{{{2
+  return str2float(reltimestr(reltime(s:last_accelerated_at, a:now))) * 1000
 endfunction
 
 
@@ -105,15 +92,10 @@ function! s:do_map(mode, options, lhs, rhs, velocity, duration, easing)  "{{{2
   let opt_buffer = a:options =~# 'b' ? '<buffer>' : ''
   let remap_p = a:options =~# 'r'
 
-  execute printf('%smap <expr> %s %s  <SID>on_start(%s)',
-  \              a:mode, opt_buffer, a:lhs, string(s:unescape_lhs(a:lhs)))
-  execute printf('%smap <expr> %s <SID>work:%s  <SID>on_end(%s)',
-  \              a:mode, opt_buffer, a:lhs, string(s:unescape_lhs(a:lhs)))
-  execute printf('%smap <expr> %s <SID>work:%s%s  <SID>on_progress(%s, %d, %d, %s)',
+  execute printf('%smap <expr> %s %s  <SID>on_progress(%s, %d, %d, %s)',
   \              a:mode,
   \              opt_buffer,
   \              a:lhs,
-  \              s:split_to_keys(a:lhs)[-1],
   \              string(s:unescape_lhs(a:lhs)),
   \              a:velocity,
   \              a:duration,
@@ -134,20 +116,8 @@ function! s:do_unmap(mode, options, lhs)  "{{{2
 
   execute printf('%sunmap %s %s',
   \              a:mode, opt_buffer, a:lhs)
-  execute printf('%sunmap %s <SID>work:%s',
-  \              a:mode, opt_buffer, a:lhs)
-  execute printf('%sunmap %s <SID>work:%s%s',
-  \              a:mode, opt_buffer, a:lhs, s:split_to_keys(a:lhs)[-1])
   execute printf('%sunmap %s <SID>rhs:%s',
   \              a:mode, opt_buffer, a:lhs)
-endfunction
-
-
-
-
-" Misc.  "{{{1
-function! s:easing(t, b, c, d)  "{{{2
-  return a:c * min([a:t, a:d]) / a:d + a:b
 endfunction
 
 
@@ -160,32 +130,17 @@ endfunction
 
 
 
-function! s:restore_options()  "{{{2
-  let s:count = 0
-
-  let &showcmd = s:original_showcmd
-  let &timeout = s:original_timeout
-  let &timeoutlen = s:original_timeoutlen
-  let &ttimeoutlen = s:original_ttimeoutlen
-endfunction
-
-
-
-
-function! s:set_up_options(lhs)  "{{{2
-  let s:original_showcmd = &showcmd
-  let s:original_timeout = &timeout
-  let s:original_timeoutlen = &timeoutlen
-  let s:original_ttimeoutlen = &ttimeoutlen
-
-  set noshowcmd  " To avoid flickering in the bottom line.
-  set timeout  " To ensure time out on :mappings
-  let &timeoutlen = get(g:accelerate_timeoutlens,
-  \                     a:lhs,
-  \                     g:accelerate_timeoutlen)
-  let &ttimeoutlen = s:original_ttimeoutlen < 0
-  \                ? s:original_timeoutlen
-  \                : s:original_ttimeoutlen
+function! s:on_progress(lhs, velocity, duration, easing)  "{{{2
+  if s:last_accelerated_key isnot a:lhs
+  \  || s:elapsed_time_in_milliseconds(reltime())
+  \     > get(g:accelerate_timeoutlens, a:lhs, g:accelerate_timeoutlen)
+    let s:last_accelerated_key = a:lhs
+    let s:count = 0
+  endif
+  let c = {a:easing}(s:count, 1, a:velocity, a:duration)
+  let s:count += 1
+  let s:last_accelerated_at = reltime()
+  return c . s:SID . 'rhs:' . a:lhs
 endfunction
 
 
