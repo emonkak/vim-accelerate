@@ -1,0 +1,218 @@
+*accelerate.txt*	Plunge into accel world 
+
+Version 0.0.0
+Script ID: ****
+Copyright (C) 2013 emonkak <emonkak@gmail.com>
+License: MIT license  {{{
+    Permission is hereby granted, free of charge, to any person obtaining
+    a copy of this software and associated documentation files (the
+    "Software"), to deal in the Software without restriction, including
+    without limitation the rights to use, copy, modify, merge, publish,
+    distribute, sublicense, and/or sell copies of the Software, and to
+    permit persons to whom the Software is furnished to do so, subject to
+    the following conditions:
+
+    The above copyright notice and this permission notice shall be included
+    in all copies or substantial portions of the Software.
+
+    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+    OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+    MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+    IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+    CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+    TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+    SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+}}}
+
+CONTENTS					*accelerate-contents*
+
+Introduction            |accelerate-introduction|
+Interface               |accelerate-interface|
+  Functions               |accelerate-functions|
+  Variables               |accelerate-variables|
+Examples                |accelerate-examples|
+Changelog               |accelerate-changelog|
+
+
+
+
+==============================================================================
+INTRODUCTION					*accelerate-introduction*
+
+*accelerate* はキー入力加速させる |key-mapping| を提供するVimのプラグインです。
+マッピングされたキーには連続した入力された回数に応じて |count| が付与されます。
+例：
+>
+	call accelerate#map('nv', '', 'j', 'gj')
+	call accelerate#map('nv', '', 'k', 'gk')
+<
+上記の例では |j| か |k| を連続して入力すると、
+キーの入力回数から計算された |count| が付与されて |gj| か |gk| が入力されます。
+
+Easing 関数やそのパラメータを指定して加速の進み具合をカスタマイズすることもできます。
+>
+	function! LinerEasing(t, b, c, d)
+		return max(a:t, a:b)
+	endfunction
+
+	call accelerate#map('nv', '', 'j', 'gj', {
+	\   'easing': 'LinerEasing',
+	\   'duration': 50,
+	\   'change_in_value': 30
+	\ })
+<
+Requirements:
+- Vim 7.2 or later
+
+Latest version:
+http://github.com/emonkak/vim-accelerate
+
+
+
+
+==============================================================================
+INTERFACE					*accelerate-interface*
+
+------------------------------------------------------------------------------
+FUNCTIONS					*accelerate-functions*
+
+						*accelerate#map()*
+accelerate#map({modes}, {options}, {lhs}, [{rhs}], [{parameters}])
+	{modes} に {lhs} から {rhs} へのキーマッピングを定義します。
+
+	{modes}		String
+		キーマッピングを定義するモードを指定するための文字列です。
+		それぞれの文字の意味は以下の通りです。
+
+		c	Command-line mode
+		i	Insert mode
+		n	Normal mode
+		s	Select mode only
+		v	Visual mode and Select mode
+		x	Visual mode only
+
+	{options}	String
+		キーマッピングに対するオプションを指定するための文字列です。
+		それぞれの文字の意味は以下の通りです。
+
+		b	|:map-<buffer>| と同じ。
+		e	|:map-<expr>| と同じ。
+		r	{rhs} を再帰的にマッピングする。
+		s	|:map-<silent>| と同じ。
+		u	|:map-<unique>| と同じ。
+
+	{lhs}		String
+		打鍵するキーシーケンスです。
+
+		<Esc> のような<>で囲われた特殊なキーは、'<Esc>'ではなく
+		"\<Esc>"のようにエスケープを展開して指定して下さい。
+
+	{rhs}	String
+		{lhs} を打鍵した時に実行するキーシーケンスです。
+		省略された場合は {lhs} と同じになります。
+
+		{lhs} の注意事項についても参照して下さい。
+
+	{parameters}	Dictionary
+		加速に関するパラメータを指定する辞書です。
+		指定可能なキーは以下のものです。
+
+		'beginning_value'	number (default: |g:accelerate_beginning_value|)
+			Easing 関数に与えられる初期値(beginning value)です。
+			{lhs} に与えられる |count| の初期値にもなります。
+
+		'change_in_value'	number (default: |g:accelerate_change_in_value|)
+			Easing 関数に与えられる変動値(change in value)です。
+			この値と *'beginning'* の値を足した値が |count| の最大
+			値になります。
+
+		'duration'	number (default: |g:accelerate_duration|)
+			Easing 関数に与えられる継続時間(duration)です。
+			この値に逹するまで |count| の値が増加していきます。
+
+		'timeout'	number (default: |g:accelerate_timeout|)
+			キーの加速のタイムアウト時間(ミリ秒)です。同じキーを
+			時間を置いて入力した時に加速されないように設定します。
+
+		'easing'	String (default: |g:accelerate_easing|)
+			Easing 関数を示す文字列です。この関数は以下の引数を取
+			ります。
+
+			{t}	number
+				{lhs} が連続して打鍵された回数です。
+
+			{b}	number
+				{parameters} の 'beginning_value' の値を取り
+				ます。
+
+			{c}	number
+				{parameters} の 'change_in_value'* の値を取り
+				ます。
+
+			{d}	number
+				{parameters}  の 'duration' の値を取ります。
+
+						*accelerate#unmap()*
+accelerate#unmap({modes}, {options}, {lhs})
+	|accelerate#map()| で定義されたマッピングを削除する。
+
+	引数については |accelerate#map()| を参照して下さい。
+
+------------------------------------------------------------------------------
+VARIABLES					*accelerate-variables*
+
+						*g:accelerate_timeout*
+g:accelerate_timeout	number	(default 80)
+	キー加速のタイムアウト時間(ミリ秒)です。
+
+						*g:accelerate_beginning*
+g:accelerate_beginning_value	number	(default 1)
+	Easing 関数に与えられる初期値(beginning value)です。
+
+						*g:accelerate_change*
+g:accelerate_change_in_value	number	(default 20)
+	Easing 関数に与えられる変動値(change in value)です。
+
+						*g:accelerate_duration*
+g:accelerate_duration	number	(default 40)
+	Easing 関数に与えられる継続時間(duration)です。
+
+						*g:accelerate_easing*
+g:accelerate_easing	string	(default 'accelerate#_liner_easing')
+	Easing 関数を示す文字列です。
+
+
+
+
+==============================================================================
+EXAMPLES					*accelerate-examples*
+
+(A) ノーマルモードでの |h| |j| |k| |l| の入力を加速する。
+>
+	call accelerate#map('nv', '', 'j')
+	call accelerate#map('nv', '', 'k')
+	call accelerate#map('nv', '', 'h')
+
+	" Fold が展開されるようにする
+	call accelerate#map('nv', 'e', 'l',
+	\                   'foldclosed(line(".")) != -1 ? "zo" : "l"')
+<
+(B) ノーマルモードでの <C-d> <C-u> の入力を加速する。
+>
+	call accelerate#map('nv', 'e', '<C-u>', 'repeat("\<C-u>", v:count1)')
+	call accelerate#map('nv', 'e', '<C-d>', 'repeat("\<C-d>", v:count1)')
+<
+
+
+
+==============================================================================
+CHANGELOG					*accelerate-changelog*
+
+0.0.0	2013-10-24T22:42:00+09:00		*accelerate-changelog-0.0.0*
+	- Initial version.
+
+
+
+
+==============================================================================
+vim:tw=78:ts=8:ft=help:norl:fen:fdl=0:fdm=marker:
