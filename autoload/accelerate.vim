@@ -24,7 +24,7 @@
 " Variables  "{{{1
 
 let s:count = 0
-let s:last_accelerated_at = [0, 0]
+let s:last_accelerated_at = reltime()
 let s:last_accelerated_key = 0
 
 function! s:SID()
@@ -32,11 +32,12 @@ function! s:SID()
 endfunction
 let s:SID = "\<SNR>" . s:SID() . '_'
 
-let g:accelerate_timeoutlen = get(g:, 'accelerate_timeoutlen', 80)
-let g:accelerate_timeoutlens = get(g:, 'accelerate_timeoutlens', {})
-let g:accelerate_velocity = get(g:, 'accelerate_velocity', 20)
+let g:accelerate_timeout = get(g:, 'accelerate_timeout', 80)
+let g:accelerate_beginning_value = get(g:, 'accelerate_beginning_value', 1)
+let g:accelerate_change_in_value = get(g:, 'accelerate_change_in_value', 20)
 let g:accelerate_duration = get(g:, 'accelerate_duration', 40)
-let g:accelerate_easing = get(g:, 'accelerate_easing', 'accelerate#_easing')
+let g:accelerate_easing = get(g:, 'accelerate_easing', 'accelerate#_liner_easing')
+let g:accelerate_debug = get(g:, 'accelerate_debug', 0)
 
 
 
@@ -44,20 +45,18 @@ let g:accelerate_easing = get(g:, 'accelerate_easing', 'accelerate#_easing')
 " Interface  "{{{1
 function! accelerate#map(modes, options, lhs, ...)  "{{{2
   let _ = {
-  \   'velocity': g:accelerate_velocity,
+  \   'beginning_value': g:accelerate_beginning_value,
+  \   'change_in_value': g:accelerate_change_in_value,
   \   'duration': g:accelerate_duration,
-  \   'easing': g:accelerate_easing,
+  \   'timeout': g:accelerate_timeout,
+  \   'easing': g:accelerate_easing
   \ }
 
-  if a:0 > 0
-    let rhs = a:1
-    call extend(_, get(a:000, 1, {}))
-  else
-    let rhs = a:lhs
-  endif
+  let rhs = get(a:000, 0, a:lhs)
+  call extend(_, get(a:000, 1, {}))
 
   for mode in s:each_char(a:modes)
-    call s:do_map(mode, a:options, a:lhs, rhs, _.velocity, _.duration, _.easing)
+    call s:do_map(mode, a:options, a:lhs, rhs, _)
   endfor
 endfunction
 
@@ -73,33 +72,37 @@ endfunction
 
 
 
-function! accelerate#_easing(t, b, c, d)  "{{{2
-  return a:c * min([a:t, a:d]) / a:d + a:b
+function! accelerate#_liner_easing(t, b, c, d)  "{{{2
+  " simple linear tweening
+  " http://www.gizma.com/easing/
+  return a:c * a:t / a:d + a:b
 endfunction
 
 
 
 
 " Misc.  "{{{1
-function! s:elapsed_time_in_milliseconds(now)  "{{{2
-  return str2float(reltimestr(reltime(s:last_accelerated_at, a:now))) * 1000
+function! s:elapsed_time_ms(start, end)  "{{{2
+  return str2float(reltimestr(reltime(a:start, a:end))) * 1000
 endfunction
 
 
 
 
-function! s:do_map(mode, options, lhs, rhs, velocity, duration, easing)  "{{{2
+function! s:do_map(mode, options, lhs, rhs, _)  "{{{2
   let opt_buffer = a:options =~# 'b' ? '<buffer>' : ''
   let remap_p = a:options =~# 'r'
 
-  execute printf('%smap <expr> %s %s  <SID>on_progress(%s, %d, %d, %s)',
+  execute printf('%smap <expr> %s %s  <SID>on_progress(%s, %d, %d, %d, %d, %s)',
   \              a:mode,
   \              opt_buffer,
   \              a:lhs,
   \              string(s:unescape_lhs(a:lhs)),
-  \              a:velocity,
-  \              a:duration,
-  \              string(a:easing))
+  \              a:_.beginning_value,
+  \              a:_.change_in_value,
+  \              a:_.duration,
+  \              a:_.timeout,
+  \              string(a:_.easing))
   execute printf('%s%smap %s <SID>rhs:%s  %s',
   \              a:mode,
   \              remap_p ? '' : 'nore',
@@ -130,16 +133,37 @@ endfunction
 
 
 
-function! s:on_progress(lhs, velocity, duration, easing)  "{{{2
-  if s:last_accelerated_key isnot a:lhs
-  \  || s:elapsed_time_in_milliseconds(reltime())
-  \     > get(g:accelerate_timeoutlens, a:lhs, g:accelerate_timeoutlen)
-    let s:last_accelerated_key = a:lhs
+function! s:on_progress(lhs, beginning_value, change_in_value, duration, timeout, easing)  "{{{2
+  if s:last_accelerated_key is a:lhs
+    if s:elapsed_time_ms(s:last_accelerated_at, reltime()) > a:timeout
+      let s:count = 0
+    endif
+  else
     let s:count = 0
+    let s:last_accelerated_key = a:lhs
   endif
-  let c = {a:easing}(s:count, 1, a:velocity, a:duration)
+
+  let c = {a:easing}(min([s:count, a:duration]),
+  \                  a:beginning_value,
+  \                  a:change_in_value,
+  \                  a:duration)
+  let c = float2nr(round(c))
+
+  if g:accelerate_debug
+    let upper_limit = a:beginning_value + a:change_in_value
+    let number_of_digits = float2nr(log10(upper_limit) + 1)
+    let progress = float2nr(1.0 * c / upper_limit * &columns)
+    echomsg printf('%*d/%d %d %s',
+    \              number_of_digits,
+    \              c,
+    \              upper_limit,
+    \              s:count,
+    \              repeat('|', progress - (number_of_digits * 2)))
+  endif
+
   let s:count += 1
   let s:last_accelerated_at = reltime()
+
   return c . s:SID . 'rhs:' . a:lhs
 endfunction
 
