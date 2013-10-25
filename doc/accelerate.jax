@@ -51,12 +51,12 @@ INTRODUCTION					*accelerate-introduction*
 
 Easing 関数やそのパラメータを指定して加速の進み具合をカスタマイズすることもできます。
 >
-	function! LinerEasing(t, b, c, d)
-		return max(a:t, a:b)
+	function! SimpleEasing(t, b, c, d)
+		return a:t + a:b
 	endfunction
 
 	call accelerate#map('nv', '', 'j', 'gj', {
-	\   'easing': 'LinerEasing',
+	\   'easing': 'SimpleEasing',
 	\   'duration': 50,
 	\   'change_in_value': 30
 	\ })
