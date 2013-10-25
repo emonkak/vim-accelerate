@@ -49,14 +49,15 @@ INTRODUCTION					*accelerate-introduction*
 上記の例では |j| か |k| を連続して入力すると、
 キーの入力回数から計算された |count| が付与されて |gj| か |gk| が入力されます。
 
-Easing 関数やそのパラメータを指定して加速の進み具合をカスタマイズすることもできます。
+パラメータを指定して加速の進み具合をカスタマイズすることもできます。
 >
-	function! SimpleEasing(t, b, c, d)
-		return a:t + a:b
+	function! QuadraticEasingOut(t, b, c, d)
+	  let t = 1.0 * a:t / a:d
+	  return -a:c * t * (t - 2) + a:b
 	endfunction
 
 	call accelerate#map('nv', '', 'j', 'gj', {
-	\   'easing': 'SimpleEasing',
+	\   'easing': 'QuadraticEasingOut',
 	\   'duration': 50,
 	\   'change_in_value': 30
 	\ })
