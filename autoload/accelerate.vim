@@ -37,7 +37,6 @@ let g:accelerate_beginning_value = get(g:, 'accelerate_beginning_value', 1)
 let g:accelerate_change_in_value = get(g:, 'accelerate_change_in_value', 20)
 let g:accelerate_duration = get(g:, 'accelerate_duration', 40)
 let g:accelerate_easing = get(g:, 'accelerate_easing', 'accelerate#_liner_easing')
-let g:accelerate_debug = get(g:, 'accelerate_debug', 0)
 
 
 
@@ -149,7 +148,7 @@ function! s:on_progress(lhs, beginning_value, change_in_value, duration, timeout
   \                  a:duration)
   let c = float2nr(round(c))
 
-  if g:accelerate_debug
+  if exists('g:accelerate_debug_p') && g:accelerate_debug_p
     let upper_limit = a:beginning_value + a:change_in_value
     let number_of_digits = float2nr(log10(upper_limit) + 1)
     let progress = float2nr(1.0 * c / upper_limit * &columns)
