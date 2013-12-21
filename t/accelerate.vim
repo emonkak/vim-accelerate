@@ -34,13 +34,13 @@ describe 'accelerate#map'
       let SID = matchstr(maparg('j', mode), '<SNR>\d\+_')
       Expect SID != ''
 
-      Expect maparg('j', mode) ==# SID . "on_progress('j', 1, 10, 20, 100, 'LinerEasing')"
+      Expect stridx(maparg('j', mode), SID . "on_progress('j', 1, 10, 20, 100, 'LinerEasing')") > -1
       Expect maparg(SID . 'rhs:j', mode) ==# 'gj'
 
       let SID = matchstr(maparg('k', mode), '<SNR>\d\+_')
       Expect SID != ''
 
-      Expect maparg('k', mode) ==# SID . "on_progress('k', 1, 10, 20, 100, 'LinerEasing')"
+      Expect stridx(maparg('k', mode), SID . "on_progress('k', 1, 10, 20, 100, 'LinerEasing')") > -1
       Expect maparg(SID . 'rhs:k', mode) ==# 'gk'
     endfor
   end
