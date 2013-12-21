@@ -92,10 +92,11 @@ function! s:do_map(mode, options, lhs, rhs, _)  "{{{2
   let opt_buffer = a:options =~# 'b' ? '<buffer>' : ''
   let remap_p = a:options =~# 'r'
 
-  execute printf('%smap <expr> %s %s  <SID>on_progress(%s, %d, %d, %d, %d, %s)',
+  execute printf('%smap <expr> %s %s v:count ? %s : <SID>on_progress(%s, %d, %d, %d, %d, %s)',
   \              a:mode,
   \              opt_buffer,
   \              a:lhs,
+  \              string(s:SID . 'rhs:' . a:lhs),
   \              string(s:unescape_lhs(a:lhs)),
   \              a:_.beginning_value,
   \              a:_.change_in_value,
