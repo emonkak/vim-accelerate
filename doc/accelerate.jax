@@ -63,7 +63,7 @@ INTRODUCTION					*accelerate-introduction*
 	\ })
 <
 Requirements:
-- Vim 7.2 or later
+- Vim 7.3.086 or later
 
 Latest version:
 http://github.com/emonkak/vim-accelerate
