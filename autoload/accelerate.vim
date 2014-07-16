@@ -32,7 +32,7 @@ function! s:SID()
 endfunction
 let s:SID = "\<SNR>" . s:SID() . '_'
 
-let g:accelerate_timeout = get(g:, 'accelerate_timeout', 80)
+let g:accelerate_timeout = get(g:, 'accelerate_timeout', 100)
 let g:accelerate_beginning_value = get(g:, 'accelerate_beginning_value', 1)
 let g:accelerate_change_in_value = get(g:, 'accelerate_change_in_value', 20)
 let g:accelerate_duration = get(g:, 'accelerate_duration', 40)

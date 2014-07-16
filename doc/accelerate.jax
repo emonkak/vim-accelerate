@@ -163,8 +163,9 @@ accelerate#unmap({modes}, {options}, {lhs})
 VARIABLES					*accelerate-variables*
 
 						*g:accelerate_timeout*
-g:accelerate_timeout	number	(default 80)
+g:accelerate_timeout	number	(default 100)
 	キー加速のタイムアウト時間(ミリ秒)です。
+	キー加速を有効に動作させるために、キーリピートの設定よりも大きい値を設定して下さい。
 
 						*g:accelerate_beginning*
 g:accelerate_beginning_value	number	(default 1)
