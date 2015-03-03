@@ -51,11 +51,6 @@ function! accelerate#map(modes, options, lhs, ...)  "{{{2
   \   'easing': g:accelerate_easing
   \ }
 
-  if v:version < 703 || v:version == 703 && !has('patch86')
-    echomsg 'accelerate.vim does not work this version of Vim. Please use 7.3.086 or later.'
-    return
-  endif
-
   let rhs = get(a:000, 0, a:lhs)
   call extend(_, get(a:000, 1, {}))
 
