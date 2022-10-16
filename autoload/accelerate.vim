@@ -23,20 +23,20 @@
 " }}}
 " Variables  "{{{1
 
-let s:count = 0
-let s:last_accelerated_at = reltime()
-let s:last_accelerated_key = 0
-
-function! s:SID()
+function! s:SID_PREFIX()
   return matchstr(expand('<sfile>'), '<SNR>\zs\d\+\ze_')
 endfunction
-let s:SID = "\<SNR>" . s:SID() . '_'
+let s:SID = "\<SNR>" . s:SID_PREFIX() . '_'
+
+let s:count = 0
+let s:last_accelerated = reltime()
+let s:last_key = 0
 
 let g:accelerate_timeout = get(g:, 'accelerate_timeout', 100)
 let g:accelerate_beginning_value = get(g:, 'accelerate_beginning_value', 1)
 let g:accelerate_change_in_value = get(g:, 'accelerate_change_in_value', 20)
 let g:accelerate_duration = get(g:, 'accelerate_duration', 40)
-let g:accelerate_easing = get(g:, 'accelerate_easing', 'accelerate#_liner_easing')
+let g:accelerate_easing = get(g:, 'accelerate_easing', s:SID . 'liner_easing')
 
 
 
@@ -71,28 +71,12 @@ endfunction
 
 
 
-function! accelerate#_liner_easing(t, b, c, d)  "{{{2
-  " simple linear tweening
-  " http://www.gizma.com/easing/
-  return a:c * a:t / a:d + a:b
-endfunction
-
-
-
-
 " Misc.  "{{{1
-function! s:elapsed_time_ms(start, end)  "{{{2
-  return str2float(reltimestr(reltime(a:start, a:end))) * 1000
-endfunction
-
-
-
-
 function! s:do_map(mode, options, lhs, rhs, _)  "{{{2
   let opt_buffer = a:options =~# 'b' ? '<buffer>' : ''
   let remap_p = a:options =~# 'r'
 
-  execute printf('%smap <expr> %s %s v:count ? %s : <SID>on_progress(%s, %d, %d, %d, %d, %s)',
+  execute printf('%snoremap <script> <expr> %s %s v:count ? %s : <SID>on_progress(%s, %d, %d, %d, %d, %s)',
   \              a:mode,
   \              opt_buffer,
   \              a:lhs,
@@ -133,14 +117,30 @@ endfunction
 
 
 
+function! s:elapsed_millis(start, end)  "{{{2
+  return str2float(reltimestr(reltime(a:start, a:end))) * 1000
+endfunction
+
+
+
+
+function! s:liner_easing(t, b, c, d)  "{{{2
+  " simple linear tweening
+  " http://www.gizma.com/easing/
+  return a:c * a:t / a:d + a:b
+endfunction
+
+
+
+
 function! s:on_progress(lhs, beginning_value, change_in_value, duration, timeout, easing)  "{{{2
-  if s:last_accelerated_key is a:lhs
-    if s:elapsed_time_ms(s:last_accelerated_at, reltime()) > a:timeout
+  if s:last_key is a:lhs
+    if s:elapsed_millis(s:last_accelerated, reltime()) > a:timeout
       let s:count = 0
     endif
   else
     let s:count = 0
-    let s:last_accelerated_key = a:lhs
+    let s:last_key = a:lhs
   endif
 
   let c = {a:easing}(min([s:count, a:duration]),
@@ -148,6 +148,7 @@ function! s:on_progress(lhs, beginning_value, change_in_value, duration, timeout
   \                  a:change_in_value,
   \                  a:duration)
   let c = float2nr(round(c))
+  let c = c > 1 ? c : ''
 
   if exists('g:accelerate_debug_p') && g:accelerate_debug_p
     let upper_limit = a:beginning_value + a:change_in_value
@@ -162,7 +163,7 @@ function! s:on_progress(lhs, beginning_value, change_in_value, duration, timeout
   endif
 
   let s:count += 1
-  let s:last_accelerated_at = reltime()
+  let s:last_accelerated = reltime()
 
   return c . s:SID . 'rhs:' . a:lhs
 endfunction
