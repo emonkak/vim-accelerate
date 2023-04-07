@@ -1,23 +1,21 @@
-function! LinerEasing(t, b, c, d)
-  return a:t + a:b
+function! s:SID() abort
+  return matchstr(expand('<sfile>'), '<SNR>\zs\d\+\ze_SID$')
 endfunction
+let s:SID = "\<SNR>" . s:SID() . '_'
 
 function! s:before() abort
   new
-
   call accelerate#map('nv', 'b', 'j', 'j', {
-  \   'beginning_value': 1,
-  \   'change_in_value': 10,
-  \   'duration': 20,
-  \   'timeout': 10,
-  \   'easing': 'LinerEasing'
+  \   'min_count': 0,
+  \   'max_count': 10,
+  \   'acceleration_steps': 10,
+  \   'timeout': 100,
   \ })
   call accelerate#map('nv', 'b', 'k', 'k', {
-  \   'beginning_value': 1,
-  \   'change_in_value': 10,
-  \   'duration': 20,
-  \   'timeout': 10,
-  \   'easing': 'LinerEasing'
+  \   'min_count': 0,
+  \   'max_count': 10,
+  \   'acceleration_steps': 10,
+  \   'timeout': 100,
   \ })
 endfunction
 
@@ -25,78 +23,56 @@ function! s:after() abort
   bdelete!
 endfunction
 
-function! s:test_mapping() abort
+function! s:test_cursor_down() abort
   call s:before()
 
+  let INCREMENTS = [1, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+
   try
-    let SID = matchstr(maparg('j', 'n'), '<SNR>\d\+_')
-    call assert_notequal('', SID)
+    call setline(1, range(1, 100))
 
-    for mode in ['n', 'v']
-      call assert_match('\V'. SID . "on_progress('j', 1, 10, 20, 10, 'LinerEasing')", maparg('j', mode))
-      call assert_equal('j', maparg(SID . 'rhs:j', mode))
-
-      call assert_match('\V' . SID . "on_progress('k', 1, 10, 20, 10, 'LinerEasing')", maparg('k', mode), )
-      call assert_equal('k', maparg(SID . 'rhs:k', mode))
+    for i in range(len(INCREMENTS))
+      normal j
+      call assert_equal(1 + s:sum(INCREMENTS[0:i]), line('.'))
     endfor
 
-    call accelerate#unmap('nv', 'b', 'j')
-    call accelerate#unmap('nv', 'b', 'k')
+    sleep 100m
 
-    for mode in ['n', 'v']
-      call assert_equal(maparg('j', mode), '')
-      call assert_equal(maparg(SID . 'rhs:j', mode), '')
-      call assert_equal(maparg('k', mode), '')
-      call assert_equal(maparg(SID . 'rhs:k', mode), '')
-    endfor
+    normal j
+    call assert_equal(1 + s:sum(INCREMENTS) + 1, line('.'))
   finally
     call s:after()
   endtry
 endfunction
 
-function! s:test_cursor_moving() abort
+function! s:test_cursor_up() abort
   call s:before()
 
+  let INCREMENTS = [1, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+
   try
-    silent put =range(1, 100)
-    1 delete _
+    call setline(1, range(1, 100))
 
-    normal ggj
-    call assert_equal(1 + 1, line('.'))
+    normal G
 
-    sleep 10m
+    for n in range(len(INCREMENTS))
+      normal k
+      call assert_equal(100 - s:sum(INCREMENTS[0:n]), line('.'))
+    endfor
 
-    normal ggjj
-    call assert_equal(line('.'), 1 + 1 + 2)
+    sleep 100m
 
-    sleep 10m
-
-    normal ggjjj
-    call assert_equal(line('.'), 1 + 1 + 2 + 3)
-
-    sleep 10m
-
-    normal ggjjjj
-    call assert_equal(line('.'), 1 + 1 + 2 + 3 + 4)
-
-    sleep 10m
-
-    normal ggjjjjj
-    call assert_equal(line('.'), 1 + 1 + 2 + 3 + 4 + 5)
-
-    sleep 15m
-
-    normal ggj
-    call assert_equal(line('.'), 1 + 1)
-
-    sleep 10m
-
-    normal ggjjjjj
-    call assert_equal(line('.'), 1 + 1 + 2 + 3 + 4 + 5)
-
-    normal Gkkkkk
-    call assert_equal(line('.'), 100 - 1 - 2 - 3 - 4 - 5)
+    normal k
+    call assert_equal(100 - (s:sum(INCREMENTS) + 1), line('.'))
   finally
     call s:after()
   endtry
+endfunction
+
+function! s:sum(xs) abort
+  let total = 0
+  for x in a:xs
+    let total += x
+  endfor
+  return total
 endfunction

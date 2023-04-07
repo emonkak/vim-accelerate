@@ -1,199 +1,145 @@
-" accelerate - plunge into accel world
-" Version: 0.0.0
-" Copyright (C) 2012 emonkak <emonkak@gmail.com>
-" License: MIT license  {{{
-"     Permission is hereby granted, free of charge, to any person obtaining
-"     a copy of this software and associated documentation files (the
-"     "Software"), to deal in the Software without restriction, including
-"     without limitation the rights to use, copy, modify, merge, publish,
-"     distribute, sublicense, and/or sell copies of the Software, and to
-"     permit persons to whom the Software is furnished to do so, subject to
-"     the following conditions:
-"
-"     The above copyright notice and this permission notice shall be included
-"     in all copies or substantial portions of the Software.
-"
-"     THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
-"     OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-"     MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
-"     IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
-"     CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
-"     TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
-"     SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-" }}}
-" Variables  "{{{1
+if !exists('g:accelerate_debug')
+  let g:accelerate_debug = 0
+endif
 
 function! s:SID() abort
   return matchstr(expand('<sfile>'), '<SNR>\zs\d\+\ze_SID$')
 endfunction
 let s:SID = "\<SNR>" . s:SID() . '_'
 
-let s:count = 0
-let s:last_accelerated = reltime()
+let s:repeated_count = 0
+let s:last_accelerated_time = 0
 let s:last_key = 0
 
-let g:accelerate_timeout = get(g:, 'accelerate_timeout', 100)
-let g:accelerate_beginning_value = get(g:, 'accelerate_beginning_value', 1)
-let g:accelerate_change_in_value = get(g:, 'accelerate_change_in_value', 20)
-let g:accelerate_duration = get(g:, 'accelerate_duration', 40)
-let g:accelerate_easing = get(g:, 'accelerate_easing', s:SID . 'liner_easing')
-
-
-
-
-" Interface  "{{{1
-function! accelerate#map(modes, options, lhs, ...)  "{{{2
-  let _ = {
-  \   'beginning_value': g:accelerate_beginning_value,
-  \   'change_in_value': g:accelerate_change_in_value,
-  \   'duration': g:accelerate_duration,
-  \   'timeout': g:accelerate_timeout,
-  \   'easing': g:accelerate_easing
+function! accelerate#map(modes, options, lhs, ...) abort
+  let acceleration_spec = {
+  \   'min_count': 0,
+  \   'max_count': 50,
+  \   'acceleration_steps': 100,
+  \   'easing_func': s:SID . 'ease_linear',
+  \   'timeout': 100,
   \ }
 
-  let rhs = get(a:000, 0, a:lhs)
-  call extend(_, get(a:000, 1, {}))
+  let rhs = a:0 > 0 ? a:1 : a:lhs
+
+  if a:0 > 1
+    call extend(acceleration_spec, a:2)
+  endif
 
   for mode in s:each_char(a:modes)
-    call s:do_map(mode, a:options, a:lhs, rhs, _)
+    call s:define_mappings(mode, a:options, a:lhs, rhs, acceleration_spec)
   endfor
 endfunction
 
-
-
-
-function! accelerate#unmap(modes, options, lhs)  "{{{2
+function! accelerate#unmap(modes, options, lhs) abort
   for mode in s:each_char(a:modes)
-    call s:do_unmap(mode, a:options, a:lhs)
+    call s:remove_mappings(mode, a:options, a:lhs)
   endfor
 endfunction
 
+function! s:define_mappings(mode, options, lhs, rhs, acceleration_spec) abort
+  let buffer_local = a:options =~# 'b' ? '<buffer>' : ''
+  let no_remap = a:options =~# 'r' ? '' : 'nore'
 
-
-
-" Misc.  "{{{1
-function! s:do_map(mode, options, lhs, rhs, _)  "{{{2
-  let opt_buffer = a:options =~# 'b' ? '<buffer>' : ''
-  let remap_p = a:options =~# 'r'
-
-  execute printf('%snoremap <script> <expr> %s %s v:count ? %s : <SID>on_progress(%s, %d, %d, %d, %d, %s)',
+  execute printf('%snoremap <script> <expr> %s %s v:count ? %s : <SID>on_step(%s, %d, %d, %d, %s, %d)',
   \              a:mode,
-  \              opt_buffer,
+  \              buffer_local,
   \              a:lhs,
-  \              string(s:SID . 'rhs:' . a:lhs),
-  \              string(s:unescape_lhs(a:lhs)),
-  \              a:_.beginning_value,
-  \              a:_.change_in_value,
-  \              a:_.duration,
-  \              a:_.timeout,
-  \              string(a:_.easing))
-  execute printf('%s%smap %s <SID>rhs:%s  %s',
+  \              string('<SID>rhs:' . a:lhs),
+  \              string(s:unescape_key_sequence(a:lhs)),
+  \              a:acceleration_spec.min_count,
+  \              a:acceleration_spec.max_count,
+  \              a:acceleration_spec.acceleration_steps,
+  \              string(a:acceleration_spec.easing_func),
+  \              a:acceleration_spec.timeout)
+  execute printf('%s%smap %s <SID>rhs:%s %s',
   \              a:mode,
-  \              remap_p ? '' : 'nore',
-  \              s:to_map_arguments(a:options),
+  \              no_remap,
+  \              s:expand_map_arguments(a:options),
   \              a:lhs,
   \              a:rhs)
 endfunction
 
-
-
-
-function! s:do_unmap(mode, options, lhs)  "{{{2
-  let opt_buffer = a:options =~# 'b' ? '<buffer>' : ''
-
-  execute printf('%sunmap %s %s',
-  \              a:mode, opt_buffer, a:lhs)
-  execute printf('%sunmap %s <SID>rhs:%s',
-  \              a:mode, opt_buffer, a:lhs)
-endfunction
-
-
-
-
-function! s:each_char(s)  "{{{2
+function! s:each_char(s) abort
   return split(a:s, '.\zs')
 endfunction
 
-
-
-
-function! s:elapsed_millis(start, end)  "{{{2
-  return str2float(reltimestr(reltime(a:start, a:end))) * 1000
+function! s:ease_linear(t) abort
+  return a:t
 endfunction
 
-
-
-
-function! s:liner_easing(t, b, c, d)  "{{{2
-  " simple linear tweening
-  " http://www.gizma.com/easing/
-  return a:c * a:t / a:d + a:b
+function! s:elapsed_millis(start_time, end_time) abort
+  return reltimefloat(reltime(a:start_time, a:end_time)) * 1000
 endfunction
 
+function! s:expand_map_arguments(arguments) abort
+  let _ = {'b': '<buffer>', 'e': '<expr>', 's': '<silent>', 'u': '<unique>'}
+  return join(map(s:each_char(a:arguments), 'get(_, v:val, "")'))
+endfunction
 
+function! s:on_step(lhs, min_count, max_count, acceleration_steps, easing_func, timeout) abort
+  let current_time = reltime()
 
-
-function! s:on_progress(lhs, beginning_value, change_in_value, duration, timeout, easing)  "{{{2
   if s:last_key is a:lhs
-    if s:elapsed_millis(s:last_accelerated, reltime()) > a:timeout
-      let s:count = 0
+    let elapsed_millis = s:elapsed_millis(s:last_accelerated_time, current_time)
+    if elapsed_millis > a:timeout
+      let s:repeated_count = 0
     endif
   else
-    let s:count = 0
     let s:last_key = a:lhs
+    let s:repeated_count = 0
   endif
 
-  let c = {a:easing}(min([s:count, a:duration]),
-  \                  a:beginning_value,
-  \                  a:change_in_value,
-  \                  a:duration)
-  let c = float2nr(round(c))
-  let c = c > 1 ? c : ''
+  let acceleration = s:repeated_count < a:acceleration_steps
+  \                ? s:repeated_count / (a:acceleration_steps * 1.0)
+  \                : 1.0
+  let acceleration = {a:easing_func}(acceleration)
+  let l:count = a:min_count + (acceleration * (a:max_count - a:min_count))
+  let l:count = float2nr(round(l:count))
+  let l:count = l:count > 1 ? l:count : ''
 
-  if exists('g:accelerate_debug_p') && g:accelerate_debug_p
-    let upper_limit = a:beginning_value + a:change_in_value
-    let number_of_digits = float2nr(log10(upper_limit) + 1)
-    let progress = float2nr(1.0 * c / upper_limit * &columns)
-    echomsg printf('%*d/%d %d %s',
-    \              number_of_digits,
-    \              c,
-    \              upper_limit,
-    \              s:count,
-    \              repeat('|', progress - (number_of_digits * 2)))
+  if g:accelerate_debug
+    " 20 = 2(spaces) + 4(percent) + 12(reserved area) + 2(progress bracket)
+    let count_len = float2nr(log10(a:max_count) + 1)
+    let progress_len = &columns - (count_len + 20)
+    if progress_len > 0
+      let progress_value = float2nr(round(progress * progress_len))
+      let progress_bar = repeat('#', progress_value)
+      \                . repeat('.', progress_len - progress_value)
+      echo printf('%*d [%s] %3d%%',
+      \           count_len,
+      \           l:count,
+      \           progress_bar,
+      \           float2nr(round(progress * 100)))
+    endif
   endif
 
-  let s:count += 1
-  let s:last_accelerated = reltime()
+  let s:repeated_count += 1
+  let s:last_accelerated_time = current_time
 
-  return c . s:SID . 'rhs:' . a:lhs
+  return l:count . s:SID . 'rhs:' . a:lhs
 endfunction
 
+function! s:remove_mappings(mode, options, lhs) abort
+  let buffer_local = a:options =~# 'b' ? '<buffer>' : ''
 
-
-
-function! s:split_to_keys(lhs)  "{{{2
-  return split(a:lhs, '\(<[^<>]\+>\|.\)\zs')
+  execute printf('%sunmap %s %s', a:mode, buffer_local, a:lhs)
+  execute printf('%sunmap %s <SID>rhs:%s', a:mode, buffer_local, a:lhs)
 endfunction
 
-
-
-
-function! s:to_map_arguments(options)  "{{{2
-  let _ = {'b': '<buffer>', 'e': '<expr>', 's': '<silent>', 'u': '<unique>'}
-  return join(map(s:each_char(a:options), 'get(_, v:val, "")'))
+function! s:split_to_keys(key_sequence) abort
+  return split(a:key_sequence, '\(<[^<>]\+>\|.\)\zs')
 endfunction
 
-
-
-
-function! s:unescape_lhs(escaped_lhs)  "{{{2
-  let keys = s:split_to_keys(a:escaped_lhs)
-  call map(keys, 'v:val =~ "^<.*>$" ? eval(''"\'' . v:val . ''"'') : v:val')
-  return join(keys, '')
+function! s:unescape_key(key) abort
+  if a:key =~# '^<\a[0-9A-Za-z_-]*>$'
+    let unescaped_key = eval('"\' . a:key . '"')
+    return unescaped_key ==# '|' ? '<Bar>' : unescaped_key
+  endif
+  return a:key
 endfunction
 
-
-
-
-" __END__  "{{{1
-" vim: foldmethod=marker
+function! s:unescape_key_sequence(key_sequence) abort
+  let keys = s:split_to_keys(a:key_sequence)
+  return join(map(keys, 's:unescape_key(v:val)'), '')
+endfunction
