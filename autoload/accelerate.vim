@@ -23,10 +23,10 @@
 " }}}
 " Variables  "{{{1
 
-function! s:SID_PREFIX()
-  return matchstr(expand('<sfile>'), '<SNR>\zs\d\+\ze_')
+function! s:SID() abort
+  return matchstr(expand('<sfile>'), '<SNR>\zs\d\+\ze_SID$')
 endfunction
-let s:SID = "\<SNR>" . s:SID_PREFIX() . '_'
+let s:SID = "\<SNR>" . s:SID() . '_'
 
 let s:count = 0
 let s:last_accelerated = reltime()
