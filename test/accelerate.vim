@@ -1,8 +1,3 @@
-function! s:SID() abort
-  return matchstr(expand('<sfile>'), '<SNR>\zs\d\+\ze_SID$')
-endfunction
-let s:SID = "\<SNR>" . s:SID() . '_'
-
 function! s:before() abort
   new
   call accelerate#map('nv', 'b', 'j', 'j', {
@@ -21,6 +16,27 @@ endfunction
 
 function! s:after() abort
   bdelete!
+endfunction
+
+function! s:test_mapping() abort
+  call s:before()
+
+  try
+    for mode in ['n', 'v']
+      call assert_notequal('', maparg('j', mode))
+      call assert_notequal('', maparg('k', mode))
+    endfor
+
+    call accelerate#unmap('nv', 'b', 'j')
+    call accelerate#unmap('nv', 'b', 'k')
+
+    for mode in ['n', 'v']
+      call assert_equal('', maparg('j', mode))
+      call assert_equal('', maparg('k', mode))
+    endfor
+  finally
+    call s:after()
+  endtry
 endfunction
 
 function! s:test_cursor_down() abort

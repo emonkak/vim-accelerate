@@ -82,7 +82,7 @@ function! s:on_step(lhs, min_count, max_count, acceleration_steps, easing_func, 
 
   if s:last_key is a:lhs
     let elapsed_millis = s:elapsed_millis(s:last_accelerated_time, current_time)
-    if elapsed_millis > a:timeout
+    if elapsed_millis >= a:timeout
       let s:repeated_count = 0
     endif
   else
@@ -90,27 +90,27 @@ function! s:on_step(lhs, min_count, max_count, acceleration_steps, easing_func, 
     let s:repeated_count = 0
   endif
 
-  let acceleration = s:repeated_count < a:acceleration_steps
-  \                ? s:repeated_count / (a:acceleration_steps * 1.0)
-  \                : 1.0
-  let acceleration = {a:easing_func}(acceleration)
-  let l:count = a:min_count + (acceleration * (a:max_count - a:min_count))
+  let acceleration_rate = s:repeated_count < a:acceleration_steps
+  \                     ? s:repeated_count / (a:acceleration_steps * 1.0)
+  \                     : 1.0
+  let acceleration_rate = {a:easing_func}(acceleration_rate)
+  let l:count = a:min_count + (acceleration_rate * (a:max_count - a:min_count))
   let l:count = float2nr(round(l:count))
   let l:count = l:count > 1 ? l:count : ''
 
   if g:accelerate_debug
-    " 20 = 2(spaces) + 4(percent) + 12(reserved area) + 2(progress bracket)
+    " 20 = 2(spaces) + 4(percent) + 12(reserved area) + 2(progress brackets)
     let count_len = float2nr(log10(a:max_count) + 1)
     let progress_len = &columns - (count_len + 20)
     if progress_len > 0
-      let progress_value = float2nr(round(progress * progress_len))
+      let progress_value = float2nr(round(acceleration_rate * progress_len))
       let progress_bar = repeat('#', progress_value)
       \                . repeat('.', progress_len - progress_value)
       echo printf('%*d [%s] %3d%%',
       \           count_len,
       \           l:count,
       \           progress_bar,
-      \           float2nr(round(progress * 100)))
+      \           float2nr(round(acceleration_rate * 100)))
     endif
   endif
 

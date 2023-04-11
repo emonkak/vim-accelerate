@@ -1,0 +1,139 @@
+*accelerate.txt*	Accelerate key repeats
+
+Author: Shota Nozaki <emonkak@gmail.com>
+License: MIT license
+
+==============================================================================
+CONTENTS						*accelerate-contents*
+
+Introduction	|accelerate-introduction|
+Interface	|accelerate-interface|
+  Functions	|accelerate-functions|
+  Variables	|accelerate-variables|
+
+==============================================================================
+INTRODUCTION					*accelerate-introduction*
+
+*accelerate* is a Vim plugin to define a special key mapping to accelerate key
+repeating. For example, to accelerate cursor movements using |hjkl| in Normal
+and Visual mode:
+>
+	call accelerate#map('nv', '', 'h')
+	call accelerate#map('nv', '', 'j')
+	call accelerate#map('nv', '', 'k')
+	call accelerate#map('nv', '', 'l')
+<
+The repeated key is added the [count] based on the acceleration rate that
+increases as the key is input repeatedly within a certain interval. The
+acceleration rate is represented by a numerical value ranging from 0.0 to 1.0, where 0.0 represents
+the slowest and 1.0 represents the fastest. The [count] and the acceleration
+rate are calculated as follows:
+
+- COUNT = MIN_COUNT + (MAX_COUNT - MIN_COUNT) * ACCELERATION_RATE
+
+- MIN_COUNT is the minimum value of [count].
+
+- MAX_COUNT is the maximum value of [count].
+
+- ACCELERATION_RATE = MIN(REPEATED_COUNT / ACCELERATION_STEPS, 1.0)
+
+- REPEATED_COUNT is the number of times the key has been input repeatedly.
+  However, if the specified time by TIMEOUT has elapsed since the previous key
+  input, this value is reset to 0.
+
+- ACCELERATION_STEPS is the number of times the acceleration rate reaches its
+  maximum value of 1.0.
+
+- TIMEOUT is the time period in milliseconds until REPEATED_COUNT is reset.
+
+For example, suppose MIN_COUNT is 0, MAX_COUNT is 5, ACCELERATION_STEPS
+is 5, and TIMEOUT is 100, key inputs will be output as follows:
+
+	Time   Input   Output   Note ~
+	0      j       j        REPEATED_COUNT is 0
+	10     j       j        REPEATED_COUNT is 1
+	20     j       2j
+	30     j       3j
+	40     j       4j
+	50     j       5j
+	60     j       5j
+	160    j       j        Timeout, REPEATED_COUNT is 0
+	170    j       j        Timeout, REPEATED_COUNT is 1
+	180    j       2j
+	190    k       k        Key changed, REPEATED_COUNT is 0
+	200    k       k        REPEATED_COUNT is 1
+	220    k       2k
+	230    k       3k
+>
+Requirements:
+
+- Vim 8.0 or later
+
+==============================================================================
+INTERFACE						*accelerate-interface*
+
+------------------------------------------------------------------------------
+FUNCTIONS						*accelerate-functions*
+
+							*accelerate#map()*
+accelerate#map({modes}, {options}, {lhs}, [{rhs}, [{acceleration_spec}]])
+	Define a mapping to accelerate key repeat from {lhs} to {rhs}.
+
+	{modes} is a |String|. Each character means one or more modes to
+	define the given key mapping. "n" means Normal mode, "v" means Visual
+	mode and Select mode (the same as what |:vmap| does), and so on.
+
+	{options} is a |String|. Each character means one of |:map-arguments|
+	or whether remapping is allowed. The meanings of characters are as
+	follows:
+
+	Char   Meaning ~
+	b      The same as |:map-<buffer>|
+	e      The same as |:map-<expr>|
+	r      Allow remap keys
+	s      The same as |:map-<silent>|
+	u      The same as |:map-<unique>|
+
+	{lhs} is a key sequence to type. To denote a special key such as
+	<Esc>, write it in <>-escaped form instead of the character as is.
+	For example, use '<Esc>' instead of "\<Esc>".
+
+	{rhs} is a a key sequence to be executed by typing {lhs}. {rhs} will
+	be added [count] based on the acceleration rate. See also {lhs} for
+	other notes. If {rhs} is not present, {rhs} will be the same as {lhs}.
+
+	{acceleration_spec} is a |Dictionary| with these keys:
+
+	Key                  Type       Description ~
+	min_count            |Number|   A minimum value of [count]
+	                                (Default: 0)
+	max_count            |Number|   A maximum value of [count]
+	                                (Default: 50)
+	acceleration_steps   |Number|   A number of times the acceleration
+	                                rate reaches its maximum value of 1.0
+	                        	(Default: 100)
+	easing_func          |String|   A function name that takes the
+	                                acceleration rate as an argument and
+	                                returns a new acceleration rate
+	                                (Default: linear easing function such
+	                                          as {t -> t})
+	timeout              |Number|   A time period in milliseconds until
+	                                the REPEATED_COUNT is reset
+	                                (Default: 100)
+
+						*accelerate#unmap()*
+accelerate#unmap({modes}, {options}, {lhs})
+	Remove a mapping to accelerate key repeat from {lhs}.
+
+	See |accelerate#map()| for the details of arguments.
+
+------------------------------------------------------------------------------
+VARIABLES						*accelerate-variables*
+
+						*g:accelerate-variable*
+g:accelerate_debug				|Boolean| (default: |False|)
+	If this value is |TRUE|, the progress bar that represents the
+	acceleration status will be output to the screen.
+
+==============================================================================
+vim:tw=78:ts=8:ft=help
