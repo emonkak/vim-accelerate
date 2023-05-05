@@ -3,9 +3,9 @@ if !exists('g:accelerate_debug')
 endif
 
 function! s:SID() abort
-  return matchstr(expand('<sfile>'), '<SNR>\zs\d\+\ze_SID$')
+  return matchstr(get(function('s:SID'), 'name'), '^<SNR>\zs\d\+')
 endfunction
-let s:SID = "\<SNR>" . s:SID() . '_'
+let s:SID_PREFIX = "\<SNR>" . s:SID() . '_'
 
 let s:repeated_count = 0
 let s:last_accelerated_time = 0
@@ -16,7 +16,7 @@ function! accelerate#map(modes, options, lhs, ...) abort
   \   'min_count': 0,
   \   'max_count': 50,
   \   'acceleration_steps': 100,
-  \   'easing_func': s:SID . 'ease_linear',
+  \   'easing_func': '<SID>ease_linear',
   \   'timeout': 100,
   \ }
 
@@ -117,7 +117,7 @@ function! s:on_step(lhs, min_count, max_count, acceleration_steps, easing_func, 
   let s:repeated_count += 1
   let s:last_accelerated_time = current_time
 
-  return l:count . s:SID . 'rhs:' . a:lhs
+  return l:count . s:SID_PREFIX . 'rhs:' . a:lhs
 endfunction
 
 function! s:remove_mappings(mode, options, lhs) abort
